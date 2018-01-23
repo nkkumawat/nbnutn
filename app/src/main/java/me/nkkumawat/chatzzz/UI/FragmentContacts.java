@@ -63,8 +63,8 @@ public class FragmentContacts extends Fragment {
                 intent.putExtra("name" , contacts.name);
                 intent.putExtra("singlechat" , contacts.number);
                 startActivity(intent);
-				Snackbar.make(view, contacts.name + "\n" + contacts.number, Snackbar.LENGTH_LONG)
-						.setAction("No action", null).show();
+//				Snackbar.make(view, contacts.name + "\n" + contacts.number, Snackbar.LENGTH_LONG)
+//						.setAction("No action", null).show();
             }
         });
     }

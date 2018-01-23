@@ -15,6 +15,7 @@ import android.support.v4.app.NotificationCompat;
 import android.util.Log;
 import android.widget.Toast;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -24,9 +25,13 @@ import java.net.URISyntaxException;
 import io.socket.client.IO;
 import io.socket.client.Socket;
 import io.socket.emitter.Emitter;
+import me.nkkumawat.chatzzz.Connection.Connection;
 import me.nkkumawat.chatzzz.Database.DbHelper;
 import me.nkkumawat.chatzzz.MainActivity;
 import me.nkkumawat.chatzzz.R;
+import me.nkkumawat.chatzzz.Socket.SocketConnection;
+import me.nkkumawat.chatzzz.UI.ChatHome;
+import me.nkkumawat.chatzzz.UI.Signup;
 import okhttp3.FormBody;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -50,51 +55,46 @@ public class MessageCheckService extends Service {
     @Override
     public void onCreate() {
     }
+    @RequiresApi(api = Build.VERSION_CODES.KITKAT)
     @Override
     public void onStart(Intent intent, int startId) {
         Toast.makeText(this , "service Created" , Toast.LENGTH_SHORT).show();
         SharedPreferences prefs = getSharedPreferences("user", MODE_PRIVATE);
         myMobile = prefs.getString("mobile", null);
-        try {
-            socket = IO.socket("http://192.168.1.70:3000");
-        } catch (URISyntaxException e) {
-            e.printStackTrace();
-        }
+        SocketConnection.ConnectSocket();
+        socket = SocketConnection.socket;
         socketsFight();
-    }
-    @RequiresApi(api = Build.VERSION_CODES.KITKAT)
-    public void getAllPandingMessages(String mobile) throws Exception {
-        RequestBody formBody = new FormBody.Builder()
-                .add("mobile", mobile)
-                .build();
-        Request request = new Request.Builder()
-                .url("http://192.168.1.70:3000/getallmessages")
-                .post(formBody)
-                .build();
-        try (Response response = client.newCall(request).execute()) {
-            if (!response.isSuccessful()) throw new IOException("Unexpected code " + response);
-            JSONObject jsonObj = new JSONObject(response.body().string());
-            System.out.println(jsonObj.get("status"));
-            if (jsonObj.getString("status").equals("200")) {
-                SharedPreferences.Editor editor = getSharedPreferences("messages", MODE_PRIVATE).edit();
-                editor.putString("mobile", mobile);
-                editor.apply();
+        getAllPandingMessages(myMobile);
 
-            } else {
-                Toast.makeText(this, "Somthing went wrong", Toast.LENGTH_SHORT).show();
-            }
-        }
     }
-
-    public void socketsFight() {
-        socket.on(Socket.EVENT_CONNECT, new Emitter.Listener() {
+    public void getAllPandingMessages(final String mobile)  {
+        String Url = "http://192.168.1.70:3000/getallmessages";
+        String Parameters = "{ mobile :"+mobile+" }";
+        Connection.post(Url , Parameters , true, new Connection.ConnectionResponse() {
             @Override
-            public void call(Object... args) {
-//                socket.emit("online", "{user:'nk'}");
-                Log.d("Nk" , "Emmited");
-//                    socket.disconnect();
+            public void JsonResponse(JSONObject jsonObj, boolean Success) {
+                try {
+                    if (!Success || jsonObj.getInt("status") != 200) {
+                        return;
+                    }
+                    if(jsonObj.getString("status").equals("200")) {
+                        Log.d("getAll------>" , jsonObj.toString());
+                        JSONArray jsonArray = new JSONArray(jsonObj.getString("body"));
+                        for(int i = 0; i < jsonArray.length() ; i ++) {
+                           JSONObject jsonObject = jsonArray.getJSONObject(i);
+                           dbHelper.insert(jsonObject.getString("message") , jsonObject.getString("sender") , jsonObject.getString("mobile"));
+                        }
+                        if(jsonArray.length()!= 0)
+                        shoNotiFication("New Messages" , "CHATZZZ");
+                    }
+                }
+                catch (Exception e) {
+                    e.printStackTrace();
+                }
             }
         });
+    }
+    public void socketsFight() {
         socket.on("send-message", new Emitter.Listener() {
             @Override
             public void call(Object... args) {
@@ -122,8 +122,6 @@ public class MessageCheckService extends Service {
             @Override
             public void call(Object... args) {}
         });
-        socket.connect();
-
     }
     private void shoNotiFication(String message , String sender)  {
         Uri soundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);

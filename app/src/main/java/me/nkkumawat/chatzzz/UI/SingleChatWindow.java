@@ -10,6 +10,7 @@ import android.widget.Button;
 import android.widget.ListView;
 import android.widget.ScrollView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -22,6 +23,7 @@ import io.socket.emitter.Emitter;
 import me.nkkumawat.chatzzz.Adapters.ChatAdapter;
 import me.nkkumawat.chatzzz.Database.DbHelper;
 import me.nkkumawat.chatzzz.R;
+import me.nkkumawat.chatzzz.Socket.SocketConnection;
 import me.nkkumawat.chatzzz.Utility.Utility;
 
 public class SingleChatWindow extends AppCompatActivity {
@@ -53,11 +55,7 @@ public class SingleChatWindow extends AppCompatActivity {
         lv_chat = (ListView)findViewById(R.id.lv_chat);
         send = (Button) findViewById(R.id.send);
         scroll_view = (ScrollView)findViewById(R.id.scroll_view);
-        try {
-            socket = IO.socket("http://192.168.1.70:3000");
-        } catch (URISyntaxException e) {
-            e.printStackTrace();
-        }
+        socket = SocketConnection.socket;
         scroll_view.post(new Runnable() {
             @Override
             public void run() {
@@ -69,7 +67,8 @@ public class SingleChatWindow extends AppCompatActivity {
             public void onClick(View view) {
                 String message = msg.getText().toString();
                 msg.setText("");
-                String jsonString = "{msg:'"+message+"' , sender: "+ myMobile+" , receiver : "+SingleChatMobile+"}";
+                dbHelper.insert(message , myMobile , SingleChatMobile);
+                String jsonString = "{message:'"+message+"' , sender: "+ myMobile+" , receiver : "+SingleChatMobile+"}";
                 JSONObject jsonObject = null;
                 try {
                     jsonObject = new JSONObject(jsonString);
@@ -77,19 +76,14 @@ public class SingleChatWindow extends AppCompatActivity {
                     e.printStackTrace();
                 }
                 socket.emit("receive-message",jsonObject);
+                setTextToList();
             }
         });
         socketsFight();
         setTextToList();
     }
     public void socketsFight() {
-        socket.on(Socket.EVENT_CONNECT, new Emitter.Listener() {
-            @Override
-            public void call(Object... args) {
-                Log.d("Nk" , "Emmited");
-            }
-        });
-        socket.on("message", new Emitter.Listener() {
+        socket.on("send-message", new Emitter.Listener() {
             @Override
             public void call(Object... args) {
                 JSONObject jsonObject = null;
@@ -100,16 +94,13 @@ public class SingleChatWindow extends AppCompatActivity {
                     sender = jsonObject.getString("sender");
                     receiver = jsonObject.getString("receiver");
                     if(receiver.equals(myMobile)){
-
-                        socket.emit("received", "{mobile:"+myMobile+"}");
-                        dbHelper.insert(message , sender , receiver);
+//                        socket.emit("received", "{mobile:"+myMobile+"}");
+//                        dbHelper.insert(message , sender , receiver);
+                        final String finalMessage = message;
                         runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
-                                Cursor c = dbHelper.getWholeData();
-                                adapter.swapCursor(c);
-    //                                setTextToList();
-                                adapter.notifyDataSetChanged();
+                                setTextToList();
                             }
                         });
                     }else {
@@ -128,7 +119,8 @@ public class SingleChatWindow extends AppCompatActivity {
         socket.connect();
     }
     public void setTextToList() {
-        cursor = dbHelper.getWholeData();
+//        cursor = dbHelper.getWholeData();
+        cursor = dbHelper.getMobileWiseData(SingleChatMobile);
         adapter = new ChatAdapter(this, cursor);
         lv_chat.setAdapter(adapter);
         Utility.setListViewHeightBasedOnItems(lv_chat);

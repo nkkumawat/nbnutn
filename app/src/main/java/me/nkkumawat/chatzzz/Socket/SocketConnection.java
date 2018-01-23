@@ -22,7 +22,7 @@ public class SocketConnection {
         socket.on(io.socket.client.Socket.EVENT_CONNECT, new Emitter.Listener() {
             @Override
             public void call(Object... args) {
-                Log.d("Nk" , "Emmited");
+                Log.d("Socket" , "Emmited in SocketConnection");
             }
         });
         socket.connect();

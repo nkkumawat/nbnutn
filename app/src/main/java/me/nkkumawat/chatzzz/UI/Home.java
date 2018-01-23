@@ -32,14 +32,14 @@ public class Home extends AppCompatActivity {
         setContentView(R.layout.activity_home);
         SharedPreferences prefs = getSharedPreferences("user", MODE_PRIVATE);
         myMobile = prefs.getString("mobile", null);
+//
+//        try {
+//            socket = IO.socket("http://192.168.1.70:3000");
+//        } catch (URISyntaxException e) {
+//            e.printStackTrace();
+//        }
 
-        try {
-            socket = IO.socket("http://192.168.1.70:3000");
-        } catch (URISyntaxException e) {
-            e.printStackTrace();
-        }
-
-        socketsFight();
+//        socketsFight();
     }
 
     public void socketsFight() {

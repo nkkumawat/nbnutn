@@ -59,6 +59,14 @@ public class DbHelper  extends SQLiteOpenHelper {
             cursor.moveToFirst();
         return  cursor;
     }
+    public Cursor getMobileWiseData(String FROM) {
+        SQLiteDatabase db = this.getReadableDatabase();
+        String[] columns = new String[]{KEY_ID, KEY_MESSAGE, KEY_USER_FROM , KEY_USER_TO};
+        Cursor cursor = db.query(CHAT_SMS,columns, KEY_USER_FROM + "=? or " + KEY_USER_TO + "=?", new String[]{FROM ,FROM }, null, null, null);
+        if (cursor != null)
+            cursor.moveToFirst();
+        return  cursor;
+    }
     //    public String getDataPass(int id) {
 //        SQLiteDatabase db = this.getReadableDatabase();
 //        Cursor cursor = db.query(WAY_2, new String[]{KEY_ID, KEY_MOB, KEY_PASS}, KEY_ID + "=?",  new String[]{String.valueOf(id)}, null, null, null, null);

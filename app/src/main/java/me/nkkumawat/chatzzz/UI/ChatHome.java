@@ -67,25 +67,12 @@ public class ChatHome extends AppCompatActivity {
         SharedPreferences prefs = getSharedPreferences("user", MODE_PRIVATE);
         myMobile = prefs.getString("mobile", null);
 
-        try {
-            socket = IO.socket("http://192.168.1.70:3000");
-        } catch (URISyntaxException e) {
-            e.printStackTrace();
-        }
+        socket = SocketConnection.socket;
         socketsFight();
     }
 
     public void socketsFight() {
-        socket.on(Socket.EVENT_CONNECT, new Emitter.Listener() {
-            @Override
-            public void call(Object... args) {
-//                socket.emit("online", "{user:'nk'}");
-                Log.d("Nk" , "Emmited");
-//                    socket.disconnect();
-            }
-        });
-
-        socket.on("message", new Emitter.Listener() {
+        socket.on("send-message", new Emitter.Listener() {
             @Override
             public void call(Object... args) {
                 JSONObject jsonObject = null;
@@ -111,8 +98,6 @@ public class ChatHome extends AppCompatActivity {
             @Override
             public void call(Object... args) {}
         });
-        socket.connect();
-
     }
     private void shoNotiFication(String message , String sender)  {
         Uri soundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
@@ -127,21 +112,14 @@ public class ChatHome extends AppCompatActivity {
         NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
         manager.notify(1, builder.build());
     }
-
-
-
-
-
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.menu_chat_home, menu);
         return true;
     }
-
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-
         int id = item.getItemId();
         if (id == R.id.action_settings) {
             return true;

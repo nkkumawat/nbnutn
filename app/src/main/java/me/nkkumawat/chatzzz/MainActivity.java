@@ -1,8 +1,12 @@
 package me.nkkumawat.chatzzz;
 
+import android.app.ActivityManager;
+import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.database.Cursor;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.provider.ContactsContract;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -17,6 +21,8 @@ import org.json.JSONObject;
 import java.util.HashMap;
 
 import me.nkkumawat.chatzzz.Connection.Connection;
+import me.nkkumawat.chatzzz.Services.MessageCheckService;
+import me.nkkumawat.chatzzz.Socket.SocketConnection;
 import me.nkkumawat.chatzzz.UI.ChatHome;
 import me.nkkumawat.chatzzz.UI.Signup;
 
@@ -30,18 +36,30 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
+        SocketConnection.ConnectSocket();
         SharedPreferences prefs = getSharedPreferences("user", MODE_PRIVATE);
         String restoredText = prefs.getString("mobile", null);
+        if(!isMyServiceRunning(MessageCheckService.class)) {
+            ConnectivityManager cm = (ConnectivityManager) this.getSystemService(Context.CONNECTIVITY_SERVICE);
+            assert cm != null;
+            NetworkInfo info = cm.getActiveNetworkInfo();
+            if (info != null) {
+                if (info.isConnected()) {
+                    Intent intentnew = new Intent(this, MessageCheckService.class);
+                    this.startService(intentnew);
+                }
+            }
+//            Intent intentnew = new Intent(this, MessageCheckService.class);
+//            stopService(intentnew);
+        }
+        getContacts();
         if (restoredText != null) {
             Intent intent = new Intent(this , ChatHome.class);
             startActivity(intent);
             this.finish();
         }
-        getContacts();
         mobile_et = (EditText)findViewById(R.id.mobile_et);
         sendotp_btn = (Button)findViewById(R.id.sendotp_btn);
-
         sendotp_btn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -98,7 +116,6 @@ public class MainActivity extends AppCompatActivity {
                     if (!Success || jsonObj.getInt("status") != 200) {
                         return;
                     }
-
                     if (jsonObj.getString("status").equals("200")) {
                         SharedPreferences.Editor editor = getSharedPreferences("contacts", MODE_PRIVATE).edit();
                         editor.putString("contacts", jsonObj.toString() );
@@ -114,5 +131,15 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         });
+    }
+
+    private boolean isMyServiceRunning(Class<?> serviceClass) {
+        ActivityManager manager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
+        for (ActivityManager.RunningServiceInfo service : manager.getRunningServices(Integer.MAX_VALUE)) {
+            if (serviceClass.getName().equals(service.service.getClassName())) {
+                return true;
+            }
+        }
+        return false;
     }
 }
