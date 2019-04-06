@@ -1,140 +1,210 @@
 package me.nkkumawat.chatzzz.UI;
 
+import android.annotation.SuppressLint;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.database.Cursor;
-import android.support.v7.app.AppCompatActivity;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.os.Bundle;
+import android.support.v7.app.AppCompatActivity;
+import android.util.Base64;
 import android.util.Log;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
+import android.widget.AbsListView;
 import android.widget.Button;
+import android.widget.ImageButton;
 import android.widget.ListView;
 import android.widget.ScrollView;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.net.URISyntaxException;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
 
-import io.socket.client.IO;
 import io.socket.client.Socket;
-import io.socket.emitter.Emitter;
-import me.nkkumawat.chatzzz.Adapters.ChatAdapter;
+import me.nkkumawat.chatzzz.Adapters.ChatArrayAdapter;
 import me.nkkumawat.chatzzz.Database.DbHelper;
+import me.nkkumawat.chatzzz.Model.ChatMessage;
 import me.nkkumawat.chatzzz.R;
 import me.nkkumawat.chatzzz.Socket.SocketConnection;
+import me.nkkumawat.chatzzz.Utility.DataDeleteListener;
+import me.nkkumawat.chatzzz.Utility.DatabaseChangedReceiver;
+import me.nkkumawat.chatzzz.Utility.ImageFilePath;
 import me.nkkumawat.chatzzz.Utility.Utility;
 
 public class SingleChatWindow extends AppCompatActivity {
-
     private int i = 0;
     private TextView msg;
     private ListView lv_chat;
     private Button send ;
     private ScrollView scroll_view;
     private Cursor cursor;
-    private ChatAdapter adapter;
     private Socket socket;
     private DbHelper dbHelper = new DbHelper(this);
     private String myMobile = null;
-    private String SingleChatMobile = null;
+    private String SingleChatMobile = "";
+    private String SingleChatMobileName = "";
+    private ImageButton pickImage;
+
+    private ChatArrayAdapter chatArrayAdapter;
+    private List<ChatMessage> chatMessageList = new ArrayList<ChatMessage>();;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
         setContentView(R.layout.activity_single_chat_window);
         Bundle bundle = getIntent().getExtras();
         if(bundle != null) {
             SingleChatMobile = bundle.getString("singlechat");
+            SingleChatMobileName = dbHelper.getNameOfContactNo(SingleChatMobile).name;
         }
+        getSupportActionBar().setTitle(SingleChatMobileName);
         SharedPreferences prefs = getSharedPreferences("user", MODE_PRIVATE);
         myMobile = prefs.getString("mobile", null);
 
         msg  = (TextView)findViewById(R.id.msg);
         lv_chat = (ListView)findViewById(R.id.lv_chat);
+        pickImage = (ImageButton) findViewById(R.id.pick_image);
         send = (Button) findViewById(R.id.send);
-        scroll_view = (ScrollView)findViewById(R.id.scroll_view);
         socket = SocketConnection.socket;
-        scroll_view.post(new Runnable() {
-            @Override
-            public void run() {
-                scroll_view.fullScroll(ScrollView.FOCUS_DOWN);
-            }
-        });
         send.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 String message = msg.getText().toString();
-                msg.setText("");
-                dbHelper.insert(message , myMobile , SingleChatMobile);
-                String jsonString = "{message:'"+message+"' , sender: "+ myMobile+" , receiver : "+SingleChatMobile+"}";
-                JSONObject jsonObject = null;
-                try {
-                    jsonObject = new JSONObject(jsonString);
-                } catch (JSONException e) {
-                    e.printStackTrace();
+                if(!message.equals("")) {
+                    msg.setText("");
+                    sendMessage(message, "text" , "nofile");
                 }
-                socket.emit("receive-message",jsonObject);
-                setTextToList();
             }
         });
-        socketsFight();
+
+        pickImage.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent();
+                intent.setType("image/*");
+                intent.setAction(Intent.ACTION_GET_CONTENT);
+                startActivityForResult(Intent.createChooser(intent, "Select Picture"), 1);
+            }
+        });
         setTextToList();
+        registerReceiver(mReceiver, new IntentFilter(DatabaseChangedReceiver.ACTION_DATABASE_CHANGED));
+        registerReceiver(mDeleteReceiver, new IntentFilter(DataDeleteListener.ACTION_DATABASE_CHANGED));
     }
-    public void socketsFight() {
-        socket.on("send-message", new Emitter.Listener() {
-            @Override
-            public void call(Object... args) {
-                JSONObject jsonObject = null;
-                String message = null , sender = null , receiver = null;
-                try {
-                    jsonObject = new JSONObject(args[0].toString());
-                    message = jsonObject.getString("message");
-                    sender = jsonObject.getString("sender");
-                    receiver = jsonObject.getString("receiver");
-                    if(receiver.equals(myMobile)){
-//                        socket.emit("received", "{mobile:"+myMobile+"}");
-//                        dbHelper.insert(message , sender , receiver);
-                        final String finalMessage = message;
-                        runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                setTextToList();
-                            }
-                        });
-                    }else {
-                        Log.d("NARENDRA KUMAWAT" , "NOT YOU!!!!!!!!!!!!!!!");
-                    }
-                } catch (JSONException e) {
-                    Log.d("NARENDRA KUMAWAT" , e.toString());
-                    e.printStackTrace();
-                }
-            }
-        });
-        socket.on(Socket.EVENT_DISCONNECT, new Emitter.Listener() {
-            @Override
-            public void call(Object... args) {}
-        });
-        socket.connect();
+
+    public void sendMessage(String message , String media_type, String fileName){
+        String msgOrFile = "";
+        if(media_type.equals("image")) {
+            msgOrFile = fileName;
+        }else {
+            msgOrFile = message;
+        }
+        dbHelper.insertChatMessage(msgOrFile, myMobile, SingleChatMobile, "sent", media_type);
+        String jsonString = "{message:'" + message + "' , sender: " + myMobile + " , receiver : " + SingleChatMobile + " , media_type : "+media_type+"}";
+        Log.d("---------------" , jsonString);
+        JSONObject jsonObject = null;
+        try {
+            jsonObject = new JSONObject(jsonString);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+        if(Utility.isInternetConnected(this)){
+            socket.emit("sent-by-device", jsonObject);
+        }else {
+            dbHelper.insertPandingChatMessage(msgOrFile, myMobile, SingleChatMobile, "sent", media_type);
+        }
+    }
+    public String getTimeOfMessage(String timestamp) {
+        @SuppressLint("SimpleDateFormat") SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        @SuppressLint("SimpleDateFormat") SimpleDateFormat timeformat = new SimpleDateFormat("HH:mm");
+        try {
+            return timeformat.format(dateFormat.parse(timestamp));
+        }catch (Exception e) {
+            return "00:00";
+        }
     }
     public void setTextToList() {
-//        cursor = dbHelper.getWholeData();
-        cursor = dbHelper.getMobileWiseData(SingleChatMobile);
-        adapter = new ChatAdapter(this, cursor);
-        lv_chat.setAdapter(adapter);
-        Utility.setListViewHeightBasedOnItems(lv_chat);
-        scroll_view.post(new Runnable() {
+        cursor = dbHelper.getMobileWiseChats(SingleChatMobile, myMobile);
+        while (!cursor.isAfterLast()) {
+            chatMessageList.add(new ChatMessage(cursor.getString(4) , cursor.getString(1),getTimeOfMessage(cursor.getString(5)) , cursor.getString(6)));
+            cursor.moveToNext();
+        }
+        cursor.close();
+        chatArrayAdapter = new ChatArrayAdapter(this, R.layout.list_chat , chatMessageList);
+        lv_chat.setAdapter(chatArrayAdapter);
+        lv_chat.setTranscriptMode(AbsListView.TRANSCRIPT_MODE_ALWAYS_SCROLL);
+        chatArrayAdapter.notifyDataSetChanged();
+    }
+    private final DatabaseChangedReceiver mReceiver = new DatabaseChangedReceiver() {
+        public void onReceive(Context context, Intent intent) {
+            cursor = dbHelper.getLastUpdatedChats(SingleChatMobile, myMobile);
+            chatArrayAdapter.add(new ChatMessage(cursor.getString(4) , cursor.getString(1),getTimeOfMessage(cursor.getString(5)), cursor.getString(6)));
+            lv_chat.setSelection(chatArrayAdapter.getCount() - 1);
+            cursor.close();
+        }
+    };
 
-            @Override
-            public void run() {
-                scroll_view.fullScroll(ScrollView.FOCUS_DOWN);
+    private final DataDeleteListener mDeleteReceiver = new DataDeleteListener() {
+        public void onReceive(Context context, Intent intent) {
+            chatMessageList.clear();
+            setTextToList();
+        }
+    };
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (requestCode == 1 && resultCode == RESULT_OK && data != null) {
+            String realPath = ImageFilePath.getPath(this, data.getData());
+            Log.d("Picture Path", realPath);
+            Bitmap imageBitmap ;
+            try {
+                String encodedImage = Utility.encodeImage(realPath , 10);
+                byte[] decodedString = Base64.decode(encodedImage, Base64.DEFAULT);
+                Bitmap decodedByte = BitmapFactory.decodeByteArray(decodedString, 0, decodedString.length);
+                DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+                Date date = new Date();
+                String fileName = dateFormat.format(date) + ".jpg";
+                Utility.saveImageToExternalStorage(decodedByte , fileName);
+                sendMessage(encodedImage, "image" , fileName);
+            } catch (Exception e) {
+                e.printStackTrace();
             }
-        });
-//        lv_chat.setClickable(false);
-//        lv_chat.setSelectionFromTop(0,
-//                cursor.getColumnCount()-1 );
 
-//        Toast.makeText(MainActivity.this , dbHelper.getDatabaseSize() + "sk" , Toast.LENGTH_LONG).show();
+        }
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        // Inflate the menu; this adds items to the action bar if it is present.
+        getMenuInflater().inflate(R.menu.menu_single_chat, menu);
+        return true;
+    }
+    public boolean onOptionsItemSelected(MenuItem item) { switch(item.getItemId()) {
+        case R.id.deleteall:
+            dbHelper.deleteMyChatToSpecific(SingleChatMobile);
+            return(true);
+    }
+        return(super.onOptionsItemSelected(item));
+    }
+
+//    @Override
+//    public void onBackPressed(){
+////        finish();
+//    }
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        unregisterReceiver(mReceiver);
+        unregisterReceiver(mDeleteReceiver);
     }
 }

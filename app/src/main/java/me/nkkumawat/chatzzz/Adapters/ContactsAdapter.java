@@ -27,7 +27,11 @@ public class ContactsAdapter extends ArrayAdapter<Contacts> {
         super(mContext, R.layout.contacts_list, contacts);
         this.contacts = contacts;
     }
-
+    @Override
+    public void add(Contacts object) {
+        contacts.add(object);
+        super.add(object);
+    }
     @NonNull
     @Override
     public View getView(int position, View convertView, @NonNull ViewGroup parent) {
@@ -41,7 +45,7 @@ public class ContactsAdapter extends ArrayAdapter<Contacts> {
         viewHolder.name.setText(contact.name);
         viewHolder.number.setText(contact.number);
         Picasso.with(getContext())
-                .load("http://smalldata.io/img/sdl_logo.png")
+                .load("https://png.pngtree.com/svg/20170602/0db185fb9c.png")
                 .fit().centerInside()
                 .placeholder(R.drawable.loading_fail)
                 .error(R.drawable.loading_fail)

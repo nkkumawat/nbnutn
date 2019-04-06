@@ -5,22 +5,62 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:layout_gravity="center_vertical"
+    android:orientation="vertical"
     tools:context="me.nkkumawat.chatzzz.MainActivity"
-    android:orientation="vertical">
-
-    <EditText
-        android:id="@+id/mobile_et"
-        android:layout_gravity="center_vertical"
+    android:weightSum="10">
+    <LinearLayout
         android:layout_width="match_parent"
-        android:inputType="number"
-        android:layout_height="wrap_content" />
+        android:layout_height="0dp"
+        android:orientation="vertical"
+        android:layout_weight="5">
+        <TextView
+            android:id="@+id/textView"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:gravity="bottom|center_horizontal"
+            android:text="Welcome to" />
+
+        <TextView
+            android:id="@+id/textView2"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center_horizontal"
+            android:text="CHATzz"
+            android:textSize="30sp" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:orientation="vertical"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="4">
+        <EditText
+            android:id="@+id/mobile_et"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_vertical"
+            android:layout_marginLeft="20dp"
+            android:layout_marginRight="20dp"
+            android:background="@drawable/border"
+            android:hint="Mobile no."
+            android:inputType="text"
+            android:padding="10dp" />
+    </LinearLayout>
+
 
     <Button
         android:id="@+id/sendotp_btn"
-        android:layout_gravity="center_vertical"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Send OTP" />
+        android:layout_width="wrap_content"
+        android:layout_height="0dp"
+        android:layout_gravity="right|center_vertical"
+        android:layout_marginRight="10dp"
+        android:layout_marginBottom="20dp"
+        android:layout_weight=".7"
+        android:background="@drawable/btn_back"
+        android:text="Send OTP"
+        android:textColor="@android:color/background_light" />
 
 
 </LinearLayout>

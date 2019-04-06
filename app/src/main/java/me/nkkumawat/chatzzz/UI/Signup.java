@@ -2,8 +2,8 @@ package me.nkkumawat.chatzzz.UI;
 
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.support.v7.app.AppCompatActivity;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -12,6 +12,7 @@ import android.widget.Toast;
 import org.json.JSONObject;
 
 import me.nkkumawat.chatzzz.Connection.Connection;
+import me.nkkumawat.chatzzz.Database.DbHelper;
 import me.nkkumawat.chatzzz.R;
 import okhttp3.OkHttpClient;
 
@@ -20,11 +21,14 @@ public class Signup extends AppCompatActivity {
     private Button  signup_btn;
     private  String mobileNo , otp;
     private final OkHttpClient client = new OkHttpClient();
+    private DbHelper dbHelper;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_signup);
+        getSupportActionBar().hide();
         Bundle bundle = getIntent().getExtras();
+        dbHelper = new DbHelper(this);
         if(bundle != null) {
             mobileNo = bundle.getString("mobile");
             otp = bundle.getString("otp");
@@ -45,6 +49,7 @@ public class Signup extends AppCompatActivity {
     public void signUp(final String mobile)  {
         String Url = "http://192.168.1.70:3000/signup";
         String Parameters = "{ mobile :" + mobile +"}";
+
         Connection.post(Url , Parameters , true, new Connection.ConnectionResponse() {
             @Override
             public void JsonResponse(JSONObject jsonObj, boolean Success) {
@@ -60,7 +65,7 @@ public class Signup extends AppCompatActivity {
                         startActivity(intent);
                         finish();
                     }else {
-//                        Toast.makeText(Signup.this , "Somthing went wrong" , Toast.LENGTH_SHORT).show();
+                        Toast.makeText(Signup.this , "Somthing went wrong" , Toast.LENGTH_SHORT).show();
                     }
                 }
                 catch (Exception e) {

@@ -9,9 +9,11 @@ import java.io.Serializable;
 public class Contacts implements Serializable {
     public String name;
     public String number;
+    public String pictureUrl;
 
-    public Contacts(String name , String number) {
+    public Contacts(String name , String number, String pictureUrl) {
         this.name = name;
         this.number = number;
+        this.pictureUrl = pictureUrl;
     }
 }
